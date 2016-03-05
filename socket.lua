@@ -24,17 +24,29 @@ end
 local statusEnum = {
     NONE = {},
     TERMINATE = {},
-    KEEPALIVE = {}
+    KEEPALIVE = {},
+    TRANSMIT = {}
 }
 
 function newSocket()
     local returnSocket = {}
     returnSocket.id = "NONE"
+    returnSocket.data = ""
+    returnSocket.lastTimeRecived = -1
+    returnSocket.timeOutTime = 10
+    returnSocket.allowPing = true
+    returnSocket.terminating = false
     returnSocket.events = {
-        death = nil, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
-        message = nil --self, message
+        death = function() end, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
+        message = function return true end, --self, header, data, body
+        asked = function end, --self, header, data, body
+        invalidHeader
     }
     returnSocket.load = function(self, msg)
+        if self.terminating then
+            self.events.death(self)
+            return statusEnum.TERMINATE
+        end
         local header = ""
         local data = ""
         local body = ""
@@ -44,15 +56,47 @@ function newSocket()
             header = msg:sub(1, sep - 1)
             data = msg:sub(sep + 1, sep2 - 1)
             body = msg:sub(sep2 + 1)
+            if header = " " then
+                header = ""
+            end
+            if data = " " then
+                data = ""
+            end
+            if body = " " then
+                body = ""
+            end
         end
         do
             local dataValues = {}
             for k, v in data:gmatch("([^|]*)|([^|]*)#?") do
-                
-        if not self.events.message(self, msg) then
+                dataValues[k] = v
+            end
+            data = dataValues
+        end
+        if not self.events.message(self, header, data, body) then
             return statusEnum.NONE
         end
         if header = "forceClose" then
             self.events.death(self, 2)
+            return statusEnum.TERMINATE
         elseif header = "data" then
-            if 
+            self.data = self.data .. body
+            if data.keepAlive then
+                return statusEnum.KEEPALIVE
+            else
+                return statusEnum.TERMINATE
+            end
+        elseif header = "askData" then
+            return statusEnum.TRANSMIT, self.events.asked(self, header, data, body)
+        elseif header = "ping" then
+            if self.allowPing then
+                return statusEnum.TRANSMIT, "pong: : "
+            end
+        elseif header = "pong" then
+        else
+            return self.events.invalidHeader(self, header, data, body)
+    end
+    returnSocket.ping = function()
+        return statusEnum.TRANSMIT, "ping: : "
+    end
+    returnSocket.
