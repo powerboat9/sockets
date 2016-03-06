@@ -9,6 +9,11 @@ local modem = assert(peripheral.find("modem", function(name, obj)
 end), "Could Not Find Modem")
 
 local sockets = {}
+local connecting = {}
+
+function getSysTime()
+    return (os.day() * 24000) + os.time()
+end
 
 function randomText()
     local randTxt = ""
@@ -34,6 +39,7 @@ function createSocket()
     returnSocket.timeOutTime = 10
     returnSocket.allowPing = true
     returnSocket.terminating = false
+    returnSocket.connected = false
     returnSocket.events = {
         death = function() end, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
         message = function() return true end, --self, header, data, body
@@ -45,6 +51,7 @@ function createSocket()
             self.events.death(self)
             return statusEnum.TERMINATE
         end
+        self.lastTimeRecived = getSysTime()
         local header = ""
         local data = ""
         local body = ""
@@ -95,6 +102,12 @@ function createSocket()
             return self.events.invalidHeader(self, header, data, body)
         end
     end
+    returnSocket.updateTime = function(self)
+        if not ((self.lastTimeRecived == -1) or ((self.timeLastRecived + self.timeOutTime) > getSysTime())) then
+            return true
+        end
+        return false
+    end
     return returnSocket
 end
 
@@ -130,10 +143,17 @@ while true do
         sockets[newId] = newSocket
     elseif command == "deleteSocket" then
         removeSocket(data.id)
+        if connecting[data.id] then
+            connecting[data.id] == nil
+        end
     elseif command == "exit" then
         for id in pairs(sockets) do
             removeSocket(id)
         end
         return nil
     elseif command == "connect" then
-        
+        connecting[data.id] = true
+    elseif command ~= "" then
+        error("Invalid Command")
+    end
+    sockets
