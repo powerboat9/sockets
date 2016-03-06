@@ -1,4 +1,7 @@
-local allowWired = ...
+local myIP, allowWired, name = ...
+assert((type(myIP) == "number") and (type(allowWired) == "boolean"), "Invalid [number], [boolean], [string]"
+myIP = (myIP and ("REGID:" .. myIP)) or ("COMPID:" .. os.getComputerID())
+name = (name and name:gsub("[^%w]*", "_")) or myIP
 
 math.randomseed(os.time())
 math.random()
@@ -40,6 +43,7 @@ function createSocket()
     returnSocket.allowPing = true
     returnSocket.terminating = false
     returnSocket.connected = false
+    returnSocket.protocol = nil
     returnSocket.events = {
         death = function() end, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
         message = function() return true end, --self, header, data, body
@@ -140,6 +144,9 @@ while true do
         if type(data.events.invalidHeader) == "function" then
             newSocket.events.invalidHeader = function() pcall(data.events.invalidHeader) end
         end
+        if type(data.protocol) == "string" then
+            newSocket.protocol = data.protocol
+        end
         sockets[newId] = newSocket
     elseif command == "deleteSocket" then
         removeSocket(data.id)
@@ -153,7 +160,17 @@ while true do
         return nil
     elseif command == "connect" then
         connecting[data.id] = true
+    elseif command = "connectFound" then
+        connecting[
     elseif command ~= "" then
         error("Invalid Command")
     end
-    sockets
+    for id, socket in pairs(sockets) do
+        socket.update()
+    end
+    for id in pairs(connecting) do
+        local socket = sockets[id]
+        modem.transmit(rednet.CHANNEL_BROADCAST, rednet.CHANNEL_BROADCAST, ("CONNECT IP=%s SOCID=%s NAME=%s:%s"):format(myIP, id, name, socket.protocol))
+        --The thing calling this file will recive the message in the event queue
+    end
+    
