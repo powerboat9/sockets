@@ -9,7 +9,6 @@ local modem = assert(peripheral.find("modem", function(name, obj)
 end), "Could Not Find Modem")
 
 local sockets = {}
-local socketIDs = {}
 
 function randomText()
     local randTxt = ""
@@ -28,9 +27,8 @@ local statusEnum = {
     TRANSMIT = {}
 }
 
-function newSocket()
+function createSocket()
     local returnSocket = {}
-    returnSocket.id = "NONE"
     returnSocket.data = ""
     returnSocket.lastTimeRecived = -1
     returnSocket.timeOutTime = 10
@@ -38,9 +36,9 @@ function newSocket()
     returnSocket.terminating = false
     returnSocket.events = {
         death = function() end, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
-        message = function return true end, --self, header, data, body
-        asked = function end, --self, header, data, body
-        invalidHeader
+        message = function() return true end, --self, header, data, body
+        asked = function() end, --self, header, data, body
+        invalidHeader = function() return statusEnum.TERMINATE end --self, header, data, body
     }
     returnSocket.load = function(self, msg)
         if self.terminating then
@@ -95,8 +93,47 @@ function newSocket()
         elseif header = "pong" then
         else
             return self.events.invalidHeader(self, header, data, body)
+        end
     end
-    returnSocket.ping = function()
-        return statusEnum.TRANSMIT, "ping: : "
-    end
-    returnSocket.
+    return returnSocket
+end
+
+function removeSocket(id)
+    sockets[id].terminating = true
+    (sockets[id]):load()
+    sockets[id] = nil
+end
+
+while true do
+    local command, data = coroutine.yield()
+    if command == "registerSocket" then
+        local newId = ""
+        while true do
+            newId = randomText()
+            if not sockets[newId] then
+                break
+            end
+        end
+        local newSocket = createSocket()
+        if type(data.events.death) == "function" then
+            newSocket.events.death = function() pcall(data.events.death) end
+        end
+        if type(data.events.message) == "function" then
+            newSocket.events.message = function() pcall(data.events.message) end
+        end
+        if type(data.events.asked) == "function" then
+            newSocket.events.asked = function() pcall(data.events.asked) end
+        end
+        if type(data.events.invalidHeader) == "function" then
+            newSocket.events.invalidHeader = function() pcall(data.events.invalidHeader) end
+        end
+        sockets[newId] = newSocket
+    elseif command == "deleteSocket" then
+        removeSocket(data.id)
+    elseif command == "exit" then
+        for id in pairs(sockets) do
+            removeSocket(id)
+        end
+        return nil
+    elseif command == "connect" then
+        
