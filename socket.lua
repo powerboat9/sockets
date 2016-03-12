@@ -48,7 +48,8 @@ function createSocket()
         death = function() end, --self, (0 - done, 1 - thisForceClose, 2 - otherForceClose)
         message = function() return true end, --self, header, data, body
         asked = function() end, --self, header, data, body
-        invalidHeader = function() return statusEnum.TERMINATE end --self, header, data, body
+        invalidHeader = function() return statusEnum.TERMINATE end, --self, header, data, body
+        connect = function() return true end --self, data
     }
     returnSocket.load = function(self, msg)
         if self.terminating then
@@ -144,6 +145,9 @@ while true do
         if type(data.events.invalidHeader) == "function" then
             newSocket.events.invalidHeader = function() pcall(data.events.invalidHeader) end
         end
+        if type(data.events.connect) == "function" then
+            newSocket.events.connect = data.events.connect
+        end
         if type(data.protocol) == "string" then
             newSocket.protocol = data.protocol
         end
@@ -160,8 +164,13 @@ while true do
         return nil
     elseif command == "connect" then
         connecting[data.id] = true
-    elseif command = "connectFound" then
-        connecting[
+    elseif (command = "attemptConnect") and (type(data.connectIP) == "string") then
+        local socket = sockets[data.id]
+        local success, channel = socket.events.connect(socket, data)
+        if success then
+            socket.channel = channel or data.requestChannel or 50000
+            socket.connectIP = data.sender.IP
+            modem.transmit(rednet.CHANNELBROADCAST, rednet.CHANNELBROADCAST, ("ACCEPT IP=%s SOCID=%s NAME=%s REQUEST IP=%s SOCID=%s NAME=%s"):format())
     elseif command ~= "" then
         error("Invalid Command")
     end
