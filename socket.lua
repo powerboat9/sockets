@@ -170,7 +170,7 @@ while true do
         if success then
             socket.channel = channel or data.requestChannel or 50000
             socket.connectIP = data.sender.IP
-            modem.transmit(rednet.CHANNELBROADCAST, rednet.CHANNELBROADCAST, ("ACCEPT IP=%s SOCID=%s NAME=%s REQUEST IP=%s SOCID=%s NAME=%s"):format())
+            modem.transmit(rednet.CHANNELBROADCAST, rednet.CHANNELBROADCAST, ("ACCEPT IP=%s SOCID=%s NAME=%s REQUEST IP=%s SOCID=%s NAME=%s"):format(myIP, data.id, name, data.sender.IP, data.sender.SOCID, data.sender.name))
     elseif command ~= "" then
         error("Invalid Command")
     end
