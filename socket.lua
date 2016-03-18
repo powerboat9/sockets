@@ -1,5 +1,5 @@
 local myIP, allowWired, name = ...
-assert((type(myIP) == "number") and (type(allowWired) == "boolean"), "Invalid [number], [boolean], [string]"
+assert((type(myIP) == "number") and (type(allowWired) == "boolean"), "Invalid [number], [boolean], [string]")
 myIP = (myIP and ("REGID:" .. myIP)) or ("COMPID:" .. os.getComputerID())
 name = (name and name:gsub("[^%w]*", "_")) or myIP
 
