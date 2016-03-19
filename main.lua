@@ -4,6 +4,8 @@ local user = coroutine.create(loadstring("/rom/programs/shell"))
 local modem = assert(peripheral.find("modem"), "Could Not Find Modem")
 modem.open(rednet.CHANNEL_BROADCAST)
 
+local myIP = 65536 + os.getComputerID()
+
 local packets = {
     displayMe = function(ip, socket, protocol)
         return {
@@ -19,15 +21,25 @@ local packets = {
             }
         }
     end,
-    attemptConnect = function
+    attemptConnect = function(otherIP, otherSocket, mySocket)
+        return {]
+            check = "Yes, this is powerboat9's socket program",
+            command = "connecting",
+            data = {
+                phase = "attemptConnection",
+                me = }}
 }
 
 local connections = {}
 
 function verifyPacket(p)
-    if not ((type(p) == "table") and (type(p.data) == "table") and (type(p.data.me) == "table") and (type(p.data.me.ip) == "number")) then return false end
-    if not (type(p.me.socket) == "string") and (#socket == 16) then return false end
-    for _, v in gsub(p.me.socket) do
+    if not ((type(p) == "table") and (type(p.data) == "table") and (type(p.data.me) == "table") and (type(p.data.me.ip) == "number") and (type(p.data.to) == "table") and (p.data.to.ip == myIP)) then return false end
+    if not ((type(p.data.me.socket) == "string") and (#p.data.me.socket == 16) and (type(p.data.to.socket) == "string") and (#p.data.to.socket == 16)) then return false end
+    for _, v in gsub(p.data.me.socket) do
+        local num = string.byte(v)
+        if not (((num >= 97) and (num <= 122)) or ((num >= 48) and (num <= 57))) then return false end
+    end
+    for _, v in gsub(p.data.to.socket) do
         local num = string.byte(v)
         if not (((num >= 97) and (num <= 122)) or ((num >= 48) and (num <= 57))) then return false end
     end
@@ -43,8 +55,13 @@ while true do
             if msg.command == "connecting" then
                 if (msg.data.phase = "display") and ((not attempHandshake) or attemptHandshake(msg)) then
                     table.insert(connections, {
-                        ip = data.me.ip
-                        socket = data.me.socket
+                        other = {
+                            ip = msg.data.me.ip,
+                            socket = msg.data.me.socket
+                        },
+                        me = {
+                            socket = msg.data.to.socket
+                        }
                     })
-                    modem.transmit(channel, channel, attemptConnect())
+                    modem.transmit(channel, channel, attemptConnect(msg.data.me.ip, msg.data.me.socket, msg.data.to.socket))
     coroutine.resume()
