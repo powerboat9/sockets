@@ -164,22 +164,10 @@ while true do
         return nil
     elseif command == "connect" then
         connecting[data.id] = true
-    elseif (command = "attemptConnect") and (type(data.connectIP) == "string") then
-        local socket = sockets[data.id]
-        local success, channel = socket.events.connect(socket, data)
-        if success then
-            socket.channel = channel or data.requestChannel or 50000
-            socket.connectIP = data.sender.IP
-            modem.transmit(rednet.CHANNELBROADCAST, rednet.CHANNELBROADCAST, ("ACCEPT IP=%s SOCID=%s NAME=%s REQUEST IP=%s SOCID=%s NAME=%s"):format(myIP, data.id, name, data.sender.IP, data.sender.SOCID, data.sender.name))
     elseif command ~= "" then
         error("Invalid Command")
     end
     for id, socket in pairs(sockets) do
         socket.update()
-    end
-    for id in pairs(connecting) do
-        local socket = sockets[id]
-        modem.transmit(rednet.CHANNEL_BROADCAST, rednet.CHANNEL_BROADCAST, ("CONNECT IP=%s SOCID=%s NAME=%s:%s"):format(myIP, id, name, socket.protocol))
-        --The thing calling this file will recive the message in the event queue
     end
     
