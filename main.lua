@@ -44,5 +44,7 @@ while true do
                 if (msg.data.phase = "display") and ((not attempHandshake) or attemptHandshake(msg)) then
                     table.insert(connections, {
                         ip = data.me.ip
-                    modem.transmit()
+                        socket = data.me.socket
+                    })
+                    modem.transmit(channel, channel, attemptConnect())
     coroutine.resume()
