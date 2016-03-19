@@ -1,18 +1,8 @@
-local myIP, allowWired, name = ...
-assert((type(myIP) == "number") and (type(allowWired) == "boolean"), "Invalid [number], [boolean], [string]")
-myIP = (myIP and ("REGID:" .. myIP)) or ("COMPID:" .. os.getComputerID())
-name = (name and name:gsub("[^%w]*", "_")) or myIP
-
 math.randomseed(os.time())
 math.random()
 math.random()
 
-local modem = assert(peripheral.find("modem", function(name, obj)
-    return obj.isWireless() or allowWired
-end), "Could Not Find Modem")
-
 local sockets = {}
-local connecting = {}
 
 function getSysTime()
     return (os.day() * 24000) + os.time()
