@@ -7,27 +7,38 @@ modem.open(rednet.CHANNEL_BROADCAST)
 local myIP = 65536 + os.getComputerID()
 
 local packets = {
-    displayMe = function(ip, socket, protocol)
+    displayMe = function(socket, protocol, myID)
         return {
             check = "Yes, this is powerboat9's socket program",
             command = "connecting",
             data = {
                 phase = "display",
                 me = {
-                    ip = ip,
+                    ip = myIP,
                     socket = socket,
                     protocol = protocol
                 }
-            }
+            },
+            myID = myID
         }
     end,
     attemptConnect = function(otherIP, otherSocket, mySocket)
-        return {]
+        return {
             check = "Yes, this is powerboat9's socket program",
             command = "connecting",
             data = {
                 phase = "attemptConnection",
-                me = }}
+                me = {
+                    ip = myIP,
+                    socket = mySocket
+                },
+                to = {
+                    ip = otherIP,
+                    socket = otherSocket
+                }
+            }
+        }
+    end
 }
 
 local connections = {}
@@ -59,9 +70,7 @@ while true do
                             ip = msg.data.me.ip,
                             socket = msg.data.me.socket
                         },
-                        me = {
-                            socket = msg.data.to.socket
-                        }
+                        phase = "awaitingConfirm"
                     })
                     modem.transmit(channel, channel, attemptConnect(msg.data.me.ip, msg.data.me.socket, msg.data.to.socket))
     coroutine.resume()
