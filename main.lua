@@ -46,11 +46,11 @@ local connections = {}
 function verifyPacket(p)
     if not ((type(p) == "table") and (type(p.data) == "table") and (type(p.data.me) == "table") and (type(p.data.me.ip) == "number") and (type(p.data.to) == "table") and (p.data.to.ip == myIP)) then return false end
     if not ((type(p.data.me.socket) == "string") and (#p.data.me.socket == 16) and (type(p.data.to.socket) == "string") and (#p.data.to.socket == 16)) then return false end
-    for _, v in gsub(p.data.me.socket) do
+    for _, v in gsub(p.data.me.socket, ".") do
         local num = string.byte(v)
         if not (((num >= 97) and (num <= 122)) or ((num >= 48) and (num <= 57))) then return false end
     end
-    for _, v in gsub(p.data.to.socket) do
+    for _, v in gsub(p.data.to.socket, ".") do
         local num = string.byte(v)
         if not (((num >= 97) and (num <= 122)) or ((num >= 48) and (num <= 57))) then return false end
     end
