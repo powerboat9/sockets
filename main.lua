@@ -18,7 +18,7 @@ function genRandHash(length)
     return s
 end
 
-function createKey()
+function gen
 
 local modem = assert(peripheral.find("modem"), "Could Not Find Modem")
 modem.open(rednet.CHANNEL_BROADCAST)
