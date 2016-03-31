@@ -1,6 +1,25 @@
 local sockets = corouting.create(loadfile(shell.getRunningProgram():sub(1, -5) .. "socket"))
 local user = coroutine.create(loadstring("/rom/programs/shell"))
 
+math.randomseed(os.time() + os.day() * 24000)
+
+do
+    if not ((type(_G.sha) == "table") and (type(_G.sha.hash256) == "function")) then
+        error("I need an api (SHA-2 at \"github.com/powerboat9\")")
+    end
+end
+
+function genRandHash(length)
+    local s = ""
+    for i = 1, length do
+        local rand = math.random(1, 16)
+        s = s .. ("0123456789abcdef"):sub(rand, rand)
+    end
+    return s
+end
+
+function createKey()
+
 local modem = assert(peripheral.find("modem"), "Could Not Find Modem")
 modem.open(rednet.CHANNEL_BROADCAST)
 
@@ -15,9 +34,9 @@ local packets = {
                 phase = "display",
                 me = {
                     ip = myIP,
-                    socket = socket,
-                    protocol = protocol
-                }
+                    socket = socket
+                },
+                protocol = protocol
             },
             myID = myID
         }
