@@ -11,8 +11,8 @@ return {
             hash = hash
         })
     end,
-    function interpret(port, msg, keytabel)
-        if (type(msg) == "table") and (type(msg.msg) == "string") and (type(msg.to) == "number") and (type(msg.from) == "number") and (type(msg.timestamp) == "number") and (msg.port == port) then
+    function interpret(me, port, msg, keytabel)
+        if (type(msg) == "table") and (type(msg.msg) == "string") and (type(msg.to) == "number") and ((msg.to == me) or ((not me) and (type(msg.to) == "number")) and (type(msg.timestamp) == "number") and (msg.port == port) then
             if SHA.hash256(("%s:%s:%s:%s:%s"):format(msg.to, msg.from, msg.timestamp, keytable[msg.from], msg.msg)) == msg.hash then
                 return msg, true
             end
