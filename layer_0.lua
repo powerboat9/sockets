@@ -1,5 +1,6 @@
 return {
-    function transmit(modem, msg, to, from, timestamp, key)
+    function transmit(modem, msg, to, from, key, timestamp)
+        timestamp = timestamp or (os.time() + (os.day() * 24000))
         local hash = SHA.hash256(("%s:%s:%s:%s:%s"):format(to, from, timestamp, key, msg))
         modem.transmit(rednet.CHANNEL_BROADCAST, rednet.CHANNEL_BROADCAST, {
             msg = msg,
