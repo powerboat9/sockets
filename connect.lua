@@ -63,4 +63,6 @@ local api = {
     function askKey(self, me, helper, key)
         layer_0.transmit(self.modem, 200, "HELP", helper, me, key)
         local listener = self:getListener(me, 200, key)
+        while true do
+            if
         
