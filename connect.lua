@@ -15,7 +15,7 @@ return {
                     layer_0.transmit(modem, port, "CONNECT", to, from, key)
                 end
             elseif e == "modem_message" then
-                local msg, signed = layer_0.interpret(from, port, msg, keytable)
+                local msg, signed = layer_0.interpret(from, port, msg, keytable) --Note: "from" is me, the connection is "from" me
                 if msg and (signed or (not keytable(msg.to)) then
                     if msg.msg == "ACCEPT CONNECT" then
                         return true
@@ -26,8 +26,30 @@ return {
             end
         end
     end,
-    listen = coroutine.create(function(me, port, whitelist, blacklist)
-        )
-            
+    listen = coroutine.create(function(modem, me, port, key, keytable, whitelist, blacklist, allowUnknown)
+        while true do
+            local _, _, _, _, msg = os.pullEvent("modem_message")
+            local msg, signed = layer_0.interpret(me, port, msg, keytable)
+            local ok = false
+            if msg then
+                if not signed then
+                    if not keytable[msg.from] then
+                        if allowUnknown then
+                            layer_0.transmit(modem, port, "OK BUT UNIDENTIFIED", msg.from, me, key)
+                            ok = true
+                        else
+                            layer_0.transmit(modem, port, "UNIDENTIFIED", msg.from, me, key)
+                        end
+                    else
+                        layer_0.transmit(modem, port, "UNSIGNED", msg.from, me, key)
+                    end
+                end
+                if ok then
+                    coroutine.yield(msg, signed)
+                end
+            end
+        end
+    end),
+    
+                    
                 
-        
