@@ -48,6 +48,8 @@ local api = {
                         else
                             layer_0.transmit(self.modem, port, "UNSIGNED", msg.from, me, key)
                         end
+                    else
+                        ok = true
                     end
                     if ok then
                         if (msg.msg == "HELP") and (port = 200) then
@@ -64,5 +66,5 @@ local api = {
         layer_0.transmit(self.modem, 200, "HELP", helper, me, key)
         local listener = self:getListener(me, 200, key)
         while true do
-            if
+            
         
