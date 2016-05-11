@@ -33,7 +33,7 @@ local api = {
     function getListener(self, me, port, key, blacklist, whitelist, allowUnknown)
         return coroutine.create(function()
             while true do
-                local _, _, _, _, msg = os.pullEvent("modem_message")
+                local _, _, _, _, msg = coroutine.yield()
                 local msg, signed = layer_0.interpret(me, port, msg, self.keytable)
                 local ok = false
                 if msg and ((not blacklist) or (not blacklist[msg.from])) and ((not whitelist) or whitelist[msg.from]) then
@@ -65,6 +65,9 @@ local api = {
     function askKey(self, me, helper, key)
         layer_0.transmit(self.modem, 200, "HELP", helper, me, key)
         local listener = self:getListener(me, 200, key)
+        coroutine.resume(listener)
         while true do
+            coroutine.resume(listener, os.pullEvent("modem_message"))
+            local msg, signed = coroutine.resume(listener)
             
         
