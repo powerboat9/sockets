@@ -53,6 +53,23 @@ return {
         end
         return false
     end,
-    function initiate(self, modem, myPrivKey, myPubKey, port, to, from)
+    function initiate(self, modem, myPrivKey, myPubKey, port, to, from, othPubKey)
+        local proof = convert.ntoh(math.random(1, 16 ^ 8))
         self.rawSend({
+            _pgram = "p_sockets",
+            type = "initiate",
+            to = to,
+            from = from,
+            proof = proof
+        })
+        local msg
+        local timer = os.startTimer()
+        while true do
+            e, timeID, _, _, msg = os.pullEvent()
+            if (e == "timer") and (timeID = timer) then
+                return false, "Could Not Connect"
+            elseif (type(msg) == "table") and (msg._pgram == "p_sockets") and (msg.type == "accept") and (msg.from == to) and convert.isH(msg.verif, 8) and (RSA.crypt(msg.verify, othPubKey) == proof) then
+                break
+            end
+            
 }
