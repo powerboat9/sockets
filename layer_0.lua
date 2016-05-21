@@ -1,3 +1,5 @@
+local version = "BETA"
+
 local mInterface = false
 local pubKey, privKey
 
@@ -71,28 +73,35 @@ return {
         end
         return false
     end,
-    function wrapMsg(self, to, port, key, msg, type)
+    function wrapMsg(self, to, port, key, msg, type, eType)
+        local tMsg = tostring(tStamp) .. ": " .. msg
+        local eMsg
+        if eType = "RSA" then
+            eMsg = PCrypt.RSA.crypt(tMsg, key)
+        elseif eType ~= "NONE" then
+            eType = "AES"
+            eMsg = PCrypt.AES.crypt(tMsg, key)
+        end
         local tStamp = os.time() + os.day() * 24000
         local newMsg = {
+            _pgram = "psockets v" .. version,
+            crypt = eType,
             from = pubKey,
             to = to,
             port = port,
-            msg = PCrypt.AES.crypt(tostring(tStamp) .. ": " .. msg, key),
-            checksum = PCrypt.SHA3(msg),
+            msg = eMsg,
+            checksum = PCrypt.SHA3(tMsg),
             type = type
         }
-        return newMsg
+        self:rawSend(newMsg)
     end,
-    function initiate(self, modem, myPrivKey, myPubKey, port, to, from, othPubKey)
+    function unwrap(msg, promiscuous, filterPort)
+        if msg._pgram ~= ("psockets v" .. version) then return false end
+        if not (promiscuous or (msg.to == pubKey)) then return false end
+        
+    function initiate(self, modem, port, to, othPubKey)
         local proof = convert.ntoh(math.random(1, 16 ^ 8))
-        self.rawSend({
-            _pgram = "p_sockets",
-            type = "initiate",
-            to = to,
-            from = from,
-            proof = proof,
-            key = PCrypt.RSA.crypt(PCrypt.genHex(1024), othPubKey)
-        })
+        self:wrapMsg(to, port, to, "CONNECT", "string", "RSA")
         local msg
         do
             local timer = os.startTimer(5)
