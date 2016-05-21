@@ -46,7 +46,7 @@ return {
     function interpret(self, me, port, msg, keytabel)
         if (type(msg) == "table") and (type(msg.msg) == "string") and (type(msg.to) == "number") and ((msg.to == me) or ((not me) and (type(msg.to) == "number")) and (type(msg.timestamp) == "number") and (msg.port == port) then
             local hTO, hFrom, hTime, hMsg = 
-            if RSA.crypt(("%s:%s:%s:%s:%s"):format(msg.to, msg.from, msg.timestamp, msg.msg), keytable[msg.from]) == msg.hash then
+            if PCrypt.RSA.crypt(("%s:%s:%s:%s:%s"):format(msg.to, msg.from, msg.timestamp, msg.msg), keytable[msg.from]) == msg.hash then
                 return msg, true
             end
             return msg, false
@@ -60,7 +60,8 @@ return {
             type = "initiate",
             to = to,
             from = from,
-            proof = proof
+            proof = proof,
+            key = PCrypt.RSA.crypt(PCrypt.genHex(1024), othPubKey)
         })
         local msg
         do
@@ -70,7 +71,7 @@ return {
                 e, timeID, _, _, msg = os.pullEvent()
                 if (e == "timer") and (timeID = timer) then
                     return false, "Could Not Connect"
-                elseif (type(msg) == "table") and (msg._pgram == "p_sockets") and (msg.type == "accept") and (msg.from == to) and convert.isH(msg.verif, 8) and convert.isH(msg.secret, 8) and (RSA.crypt(msg.verify, othPubKey) == proof) then
+                elseif (type(msg) == "table") and (msg._pgram == "p_sockets") and (msg.type == "accept") and (msg.from == to) and convert.isH(msg.verif, 8) and convert.isH(msg.secret, 8) and (PCrypt.RSA.crypt(msg.verify, othPubKey) == proof) then
                     break
                 end
             end
