@@ -98,7 +98,8 @@ return {
     function unwrap(msg, promiscuous, filterPort)
         if msg._pgram ~= ("psockets v" .. version) then return false end
         if not (promiscuous or (msg.to == pubKey)) then return false end
-        
+        local dMsg
+        if msg.crypt == "RSA" then
     function initiate(self, modem, port, to, othPubKey)
         local proof = convert.ntoh(math.random(1, 16 ^ 8))
         self:wrapMsg(to, port, to, "CONNECT", "string", "RSA")
