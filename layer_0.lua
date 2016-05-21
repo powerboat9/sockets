@@ -1,4 +1,22 @@
 local mInterface = false
+local pubKey, privKey
+
+do
+    local handle = fs.open("/.identity", "r")
+    if handle then
+        pubKey, privKey = handle.readLine(), handle.readLine()
+        pubLey = isH(pubKey, PCrypt.RSA.hLen) and pubKey
+        privKey = isH(privKey, PCrypt.RSA.hLen) and privKey
+        handle.close()
+    end
+end
+
+if not (pubKey and privKey) then
+    pubKey, privKey = PCrypt.RSA.keygen()
+    local handle = fs.open("/.identity", "w")
+    handle.write(pubKey .. "\n" .. privKey)
+    handle.close()
+end
 
 return {
     CHANNEL = 20000,
@@ -53,6 +71,18 @@ return {
         end
         return false
     end,
+    function wrapMsg(self, to, port, key, msg, type)
+        local tStamp = os.time() + os.day() * 24000
+        local newMsg = {
+            from = pubKey,
+            to = to,
+            port = port,
+            msg = PCrypt.AES.crypt(tostring(tStamp) .. ": " .. msg, key),
+            checksum = PCrypt.SHA3(msg),
+            type = type
+        }
+        return newMsg
+    end,
     function initiate(self, modem, myPrivKey, myPubKey, port, to, from, othPubKey)
         local proof = convert.ntoh(math.random(1, 16 ^ 8))
         self.rawSend({
@@ -76,5 +106,4 @@ return {
                 end
             end
         end
-        
 }
