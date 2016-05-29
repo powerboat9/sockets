@@ -2,9 +2,9 @@ local tGet = {}
 
 function tGet:sendRSA(to, msg, port)
     self:check()
-    if type(msg) ~= "string" then error("Could not send type " .. type(msg)
+    if type(msg) ~= "string" then error("Could not send type " .. type(msg)) end
     self.modem.transmit(self.channel, self.channel, {
-        _program = "PSockets"'
+        _program = "PSockets"
         _encrypt = "RSA"
         to = to,
         from = self.pubKey,
