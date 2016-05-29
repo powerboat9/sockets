@@ -2,7 +2,10 @@ local tGet = {}
 
 function tGet:check()
     if not self.modem then
-        local wireless = peripheral.find("modem"
+        local wireless = peripheral.find("modem", function(name, obj) return obj.isWireless end)
+        local wired = peripheral.find("modem", function(name, obj) return not obj.isWireless() end)
+        self.modem = wireless or wired or (return false)
+    end
 
 function tGet:sendRSA(to, msg, port)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg)) end
