@@ -7,14 +7,14 @@ function tGet:check()
         self.modem = wireless or wired or (return false)
     end
     if not self.me then
-        self.me = "ID_" .. os.getComputerID()
+        local h = fs.open("/.ids/default", "r")
+        self.me = self.me or "ID_" .. os.getComputerID()
     end
 end
 
 function tGet:checkRSA()
-    local 
-    local ids = fs.find("/.ids/*/RSA")
-    if not ids[1] then
+    local id = fs.open("/.ids/default", "r")
+    local pubKey 
         
 
 function tGet:sendRSA(to, msg, port)
