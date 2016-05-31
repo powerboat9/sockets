@@ -1,4 +1,5 @@
 local tGet = {}
+local tempIDs = {}
 
 function tGet:check()
     if not self.modem then
