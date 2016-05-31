@@ -7,24 +7,29 @@ function tGet:check()
         local wired = peripheral.find("modem", function(name, obj) return not obj.isWireless() end)
         self.modem = wireless or wired or (return false)
     end
-    if not self.me then
-        local h = fs.open("/.ids/default", "r")
-        if h then
-            self.me = h.readLine():gsub("%s", "")
-            self.me = self.me and (self.me ~= "")
-        end
-        self.me = self.me or "ID_" .. os.getComputerID()
-    end
 end
 
 function tGet:checkRSA()
-    self:check()
-    local id = fs.open("/.ids/default", "r")
+    tGet:check()
+    if not (self.privKey and self.pubKey) then
+        local h = fs.open("/.ids/default", "r")
+        if h then
+            self.pubKey = h.readLine():gsub("%s", "")
+            self.pubKey = self.pubKey and PCrypt.convert.isH(self.pubKey, 512)
+            self.privKey = h.readLine():gsub("%s", "")
+            self.privKey = self.privKey and PCrypt.convert.isH(self.privKey, 512)
+            if self.pubKey and self.privKey and (PCrypt.RSA.crypt(PCrypt.RSA.crypt("Comment me out for problems!", self.pubKey), self.privKey) == "Comment me out for problems!") then
+                self.pubKey, self.privKey = false, false
+            end
+        end
+    end
     if not (self.privKey and self.pubKey) then
         self.privKey, self.pubKey = PCrypt.RSA.keygen()
+        local h = fs.open("/.ids/default", "w")
+        h.write(self.pubKey .. "\n" .. self.privKey)
+        h.close()
     end
-        
-        
+end
 
 function tGet:sendRSA(to, msg, port)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg)) end
@@ -39,7 +44,7 @@ function tGet:sendRSA(to, msg, port)
     })
 end
 
-function tGet:sendAES(to, msg, key)
+function tGet:sendAES(to, from, msg, key)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg), 2) end
     self:check()
     self.modem.transmit(self.channel, self.channel, {
