@@ -8,13 +8,21 @@ function tGet:check()
     end
     if not self.me then
         local h = fs.open("/.ids/default", "r")
+        if h then
+            self.me = h.readLine():gsub("%s", "")
+            self.me = self.me and (self.me ~= "")
+        end
         self.me = self.me or "ID_" .. os.getComputerID()
     end
 end
 
 function tGet:checkRSA()
+    self:check()
     local id = fs.open("/.ids/default", "r")
-    local pubKey 
+    if not (self.privKey and self.pubKey) then
+        self.privKey, self.pubKey = PCrypt.RSA.keygen()
+    end
+        
         
 
 function tGet:sendRSA(to, msg, port)
