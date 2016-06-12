@@ -6,6 +6,7 @@ function tGet:check()
         local wireless = peripheral.find("modem", function(name, obj) return obj.isWireless end)
         local wired = peripheral.find("modem", function(name, obj) return not obj.isWireless() end)
         self.modem = wireless or wired or (return false)
+        return true
     end
 end
 
@@ -31,8 +32,9 @@ function tGet:checkRSA()
     end
 end
 
-function tGet:sendRSA(to, msg, port)
+function tGet:sendRSA(to, msg, port, order, done)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg)) end
+    if #msg > 32 then error("Could not send msg of length " .. #msg, 2) end
     self:checkRSA()
     self.modem.transmit(self.channel, self.channel, {
         _program = "PSockets"
@@ -44,8 +46,9 @@ function tGet:sendRSA(to, msg, port)
     })
 end
 
-function tGet:sendAES(to, msg, port, key)
+function tGet:sendAES(to, msg, port, key, order, done)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg), 2) end
+    if #msg > 32 then error("Could not send msg of length " .. #msg, 2) end
     self:check()
     self.modem.transmit(self.channel, self.channel, {
         _program = "PSockets",
@@ -59,6 +62,7 @@ end
 
 function tGet:sendPlain(to, msg)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg), 2) end
+    if #msg > 32 then error("Could not send msg of length " .. #msg, 2) end
     self:check()
     self.modem.transmit(self.channel, self.channel, {
         _program = "PSockets",
@@ -70,5 +74,4 @@ function tGet:sendPlain(to, msg)
 end
 
 function tGet:recv(port)
-    return coroutine.create(function()
-        
+    
