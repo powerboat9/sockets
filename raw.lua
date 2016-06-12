@@ -44,7 +44,7 @@ function tGet:sendRSA(to, msg, port)
     })
 end
 
-function tGet:sendAES(to, from, msg, key)
+function tGet:sendAES(to, msg, port, key)
     if type(msg) ~= "string" then error("Could not send type " .. type(msg), 2) end
     self:check()
     self.modem.transmit(self.channel, self.channel, {
@@ -69,4 +69,6 @@ function tGet:sendPlain(to, msg)
     })
 end
 
-function 
+function tGet:recv(port)
+    return coroutine.create(function()
+        
