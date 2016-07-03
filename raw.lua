@@ -1,6 +1,12 @@
 local tGet = {}
 local tempIDs = {}
 
+local function hCheck(str, len)
+    if len and (#str ~= len) then return false end
+    if str ~= str:gsub("[^0-9a-fA-F]", "") then return false end
+    return true
+end
+
 function tGet:check()
     if not self.modem then
         local wireless = peripheral.find("modem", function(name, obj) return obj.isWireless end)
@@ -25,8 +31,13 @@ function tGet:checkRSA()
         end
     end
     if not (self.privKey and self.pubKey) then
+        local defID = "/.ids/default"
         self.privKey, self.pubKey = PCrypt.RSA.keygen()
-        local h = fs.open("/.ids/default", "w")
+        if fs.exists(defID) and (not fs.isDir(defID)) then
+            local fr = fs.open(defID", "r")
+            local pub, pri = fr.readLine(), fr.readLine()
+            if 
+        local h = fs.open(defID, "w")
         h.write(self.pubKey .. "\n" .. self.privKey)
         h.close()
     end
