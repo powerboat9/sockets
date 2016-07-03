@@ -34,7 +34,7 @@ function tGet:checkRSA()
         local defID = "/.ids/default"
         self.privKey, self.pubKey = PCrypt.RSA.keygen()
         if fs.exists(defID) and (not fs.isDir(defID)) then
-            local fr = fs.open(defID", "r")
+            local fr = fs.open(defID, "r")
             local pub, pri = fr.readLine(), fr.readLine()
             if 
         local h = fs.open(defID, "w")
