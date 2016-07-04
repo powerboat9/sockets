@@ -1,4 +1,7 @@
 local version = "0.1.0-developement"
+local CHANNEL_SOCKETS = 60000
+
+local function verifyPacket()
 
 local function package(str, size)
     if type(str) ~= "string" then error("Input is a " .. type(str) .. ", expected a string", 2) end
@@ -42,9 +45,10 @@ local function getRawPackets(str, to, from, size, _funct) --_funct is not intend
             _version = version,
             to = to,
             from = from,
-            msg = _funct(v), --To allow encryption to do it's stuff
+            msg = v
             msgID = PCrypt.convert.randH(32)
         }
+        _funct(ret[k])
     end
     bind(ret)
     return ret
@@ -57,7 +61,10 @@ local function getAESPackets(str, to, from, key)
     if not PCrypt.convert.isH(key, 256) then
         error("Key is not a 256 byte hexadecimal string", 2)
     end
-    return getRawPackets(str, to, from, 128, function(v) return PCrypt.AES.crypt(v, key) end)
+    return getRawPackets(str, to, from, 128, function(v)
+        v.msg = PCrypt.AES.crypt(v.msg, key)
+        v.encryption = "AES"
+    end)
 end
 
 /*local function getRSAPackets(str, to, from, recevPubKey, sendPrivKey)
@@ -68,4 +75,6 @@ end
     if (type(sendPrivKey) ~= "number") or (sendPrivKey < 1) then error("Invalid private key", 2) end
     eMsg = package(PCrypt.RSA.crypt(PCrypt.RSA.crypt(str, sendPrivKey), recevPubKey), 128)*/
 
-local function get(eventList)
+local function get(eventList, connections)
+    local e, _, to, from, msg, dist = table.unpack(eventList)
+    if (e == "modem_message") and (to == CHANNEL_SOCKETS) and (from == CHANNEL_SOCKETS) then
