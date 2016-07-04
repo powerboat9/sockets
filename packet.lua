@@ -1,3 +1,5 @@
+local version = "0.1.0-developement"
+
 local function package(str, size)
     if type(str) ~= "string" then error("Input is a " .. type(str) .. ", expected a string", 2) end
     if type(size) ~= "number" then error("Size is a " .. type(size) .. ", expected a number", 2) end
@@ -15,6 +17,14 @@ local function package(str, size)
     return ret
 end
 
-function sendPacket(str, encryption, n)
+function getRawPacket(str, encryption, to, from, n, key)
     if type(str) ~= "string" then error("Message is a " .. type(str) .. ", expected a string", 2) end
-    if (encryption ~= "PLAIN") and (encryption ~= "RSA") and (encryption ~= "AES") then error("Invalid encryption type", 2) end
+    local eMsg
+    if encryption == "RSA" then
+        and (encryption ~= "AES") then error("Invalid encryption type", 2) end
+    local packetRet = {
+        _pgram = " powerboat9:sockets",
+        _version = version,
+        to = to,
+        from = from,
+        
