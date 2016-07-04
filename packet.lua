@@ -25,28 +25,45 @@ local function bind(packets)
         v.size = #packets
         v.n = k
     end
-    return packets
 end
 
-local function getRawPacket(str, to, from)
-    if not PCrypt.convert.isH(str, 128) then
-        error("Message is not a 128 byte hexadecimal string", 2)
+local function getRawPackets(str, to, from, size, _funct) --_funct is not intended for users
+    if not PCrypt.convert.isH(str) then
+        error("Message is not a hexadecimal string", 2)
     end
-    return {
-        _pgram = " powerboat9:sockets",
-        _version = version,
-        to = to,
-        from = from,
-        msg = str,
-        msgID = PCrypt.convert.randH(32)
-    }
+    if type(size) ~= "number" then error("Size is not a number", 2) end
+    if size < 1 then error("Size cannot be less than 1", 2) end
+    _funct = ((type(_funct) ~= "function") and _funct) or (function(v) return v end)
+    local ret = {}
+    local divMSG = package(str, size * 2)
+    for k, v in ipairs(divMSG) do
+        ret[k] = {
+            _pgram = " powerboat9:sockets",
+            _version = version,
+            to = to,
+            from = from,
+            msg = _funct(v), --To allow encryption to do it's stuff
+            msgID = PCrypt.convert.randH(32)
+        }
+    end
+    bind(ret)
+    return ret
 end
 
-local function getRSAPackets(str, to, from, recevPubKey, sendPrivKey)
+local function getAESPackets(str, to, from, key)
+    if not PCrypt.convert.isH(str) then
+        error("Message not a hexadecimal string", 2)
+    end
+    if not PCrypt.convert.isH(key, 256) then
+        error("Key is not a 256 byte hexadecimal string", 2)
+    end
+    return getRawPackets(str, to, from, 128, function(v) return PCrypt.AES.crypt(v, key) end)
+end
+
+/*local function getRSAPackets(str, to, from, recevPubKey, sendPrivKey)
     if type(str) ~= "string" then
-        error("Message is not a 128 byte hexadecimal string", 2)
+        error("Message is not a string", 2)
     end
     if (type(recevPubKey) ~= "number") or (recevPubKey < 1) then error("Invalid public key", 2) end
     if (type(sendPrivKey) ~= "number") or (sendPrivKey < 1) then error("Invalid private key", 2) end
-    eMsg = package(PCrypt.RSA.crypt(PCrypt.RSA.crypt(str, sendPrivKey), recevPubKey), 128)
-    
+    eMsg = package(PCrypt.RSA.crypt(PCrypt.RSA.crypt(str, sendPrivKey), recevPubKey), 128)*/
