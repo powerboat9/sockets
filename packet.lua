@@ -1,3 +1,7 @@
+/*
+PMETA START
+#
+
 local version = "0.1.0-developement"
 local CHANNEL_SOCKETS = 60000
 
@@ -64,6 +68,7 @@ local function getAESPackets(str, to, from, key)
     return getRawPackets(str, to, from, 128, function(v)
         v.msg = PCrypt.AES.crypt(v.msg, key)
         v.encryption = "AES"
+        v.
     end)
 end
 
@@ -74,6 +79,8 @@ end
     if (type(recevPubKey) ~= "number") or (recevPubKey < 1) then error("Invalid public key", 2) end
     if (type(sendPrivKey) ~= "number") or (sendPrivKey < 1) then error("Invalid private key", 2) end
     eMsg = package(PCrypt.RSA.crypt(PCrypt.RSA.crypt(str, sendPrivKey), recevPubKey), 128)*/
+
+local packetShape = {}
 
 local function get(eventList, connections)
     local e, _, to, from, msg, dist = table.unpack(eventList)
