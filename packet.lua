@@ -1,7 +1,7 @@
-/*
+[[
 PMETA START
 #include [powerboat9:PCrypt]
-*/
+]]
 
 local version = "0.1.0-developement"
 local CHANNEL_SOCKETS = 60000
