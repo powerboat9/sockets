@@ -33,6 +33,7 @@ end
 local callbacks = {}
 local setupCallback(funct, timesLeft)
     assert(canCall(funct), "Invalid function")
+    timesLeft = timesLeft or 9
     assert(type(timesLeft) == "number", "Invalid callback number")
     local t = os.startTimer(1)
     callbacks[t] = function()
