@@ -30,6 +30,12 @@ local verifyMsg(e, port, address)
     return e[1] == "modem_message" and type(e[5]) == "table" and (e[5].port == port or not port) and (e[5].to == address or not address) and (isValidPort(e[5].retPort) or e[5].retPort == nil) and isValidAddress(e[5].from) and isValidMsgId(e[5].msgID)
 end
 
+local function updateTimer(t)
+    if callbacks[t] then
+        callbacks[t]()
+    end
+end
+
 local callbacks = {}
 local setupCallback(funct, timesLeft, dontBreak)
     assert(canCall(funct), "Invalid function")
@@ -53,26 +59,24 @@ local setupCallback(funct, timesLeft, dontBreak)
     return t
 end
 
-local function updateTimer(t)
-    if callbacks[t] then
-        callbacks[t]()
-    end
-end
-
 local function sndBack(e)
     local t
     t = setupCallback(function()
         if verifyMsg(e) then
-        local ok = pcall(function() peripheral.call(e[2], "transmit", e[4], e[3], {
-            type = "verify",
-            port = e[5].retPort or e[5].port,
-            to = e[5].from,
-            from = e[5].to,
-            msgID = e[5].msgID
-        }) end)
-        if not ok then
-            
-    end
+            local ok = pcall(function() peripheral.call(e[2], "transmit", e[4], e[3], {
+                type = "verify",
+                port = e[5].retPort or e[5].port,
+                to = e[5].from,
+                from = e[5].to,
+                msgID = e[5].msgID
+            }) end)
+            if not ok
+                updateTimer(t)
+            end
+        else
+            updateTimer(t)
+        end
+    end, 9)
 end
 
 local connections = {}
@@ -87,6 +91,6 @@ function genListen(port, address)
             elseif verifyMsg(e, port, address) then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
-                    sndBack
+                    sndBack(e)
                 elseif e[5].type == "connect" then
                     
