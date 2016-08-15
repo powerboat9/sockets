@@ -31,7 +31,7 @@ local verifyMsg(e, port, address)
 end
 
 local callbacks = {}
-local setupCallback(funct, timesLeft)
+local setupCallback(funct, timesLeft, dontBreak)
     assert(canCall(funct), "Invalid function")
     timesLeft = timesLeft or 9
     assert(type(timesLeft) == "number", "Invalid callback number")
@@ -39,12 +39,12 @@ local setupCallback(funct, timesLeft)
     callbacks[t] = function()
         local ok, err = pcall(funct)
         local _, _, id = tostring(funct):find("^[^ ]* (.*)")
-        if not ok then
+        if not ok or dontBreak then
             log("Callback " .. id .. " failed, " .. (timesLeft == 0 and "no" or timesLeft) .. " tries left")
             if timesLeft < 0 then
                 log("Failed to call a function " .. timesLeft .. " times")
             elseif timesLeft > 0 then
-                setupCallback(funct, timesLeft - 1)
+                setupCallback(funct, timesLeft - 1, dontBreak)
             end
         else
             log("Callback " .. id .. " was successful")
@@ -60,7 +60,9 @@ local function updateTimer(t)
 end
 
 local function sndBack(e)
-    if verifyMsg(e) then
+    local t
+    t = setupCallback(function()
+        if verifyMsg(e) then
         local ok = pcall(function() peripheral.call(e[2], "transmit", e[4], e[3], {
             type = "verify",
             port = e[5].retPort or e[5].port,
@@ -68,9 +70,8 @@ local function sndBack(e)
             from = e[5].to,
             msgID = e[5].msgID
         }) end)
-        if ok then
-            setupCallback(function() sndBack(e) end)
-        end
+        if not ok then
+            
     end
 end
 
@@ -86,5 +87,6 @@ function genListen(port, address)
             elseif verifyMsg(e, port, address) then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
+                    sndBack
                 elseif e[5].type == "connect" then
                     
