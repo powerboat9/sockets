@@ -1,6 +1,16 @@
 math.randomseed(os.time()); math.random(); math.random()
 local function log(msg) end
 
+local function canCall(v) --"Tail recursion is it's own reward" -xkcd
+    if type(v) == "function" then
+        return true
+    elseif type(v) == "table" and getmetatable(v) then
+        return canCall(getmetatable(v).__call)
+    else
+        return false
+    end
+end
+
 local interfaces = {}
 function addInterface(side)
     if peripheral.getType(side) == "modem" then
@@ -22,11 +32,31 @@ end
 
 local callbacks = {}
 local setupCallback(funct, timesLeft)
+    assert(canCall(funct), "Invalid function")
+    assert(type(timesLeft) == "number", "Invalid callback number")
     local t = os.startTimer(1)
     callbacks[t] = function()
         local ok, err = pcall(funct)
-        if not OK then
-            log("Callback failed, " .. (timesLeft + 1) .. " tries left"
+        local _, _, id = tostring(funct):find("^[^ ]* (.*)")
+        if not ok then
+            log("Callback " .. id .. " failed, " .. (timesLeft == 0 and "no" or timesLeft) .. " tries left")
+            if timesLeft < 0 then
+                log("Failed to call a function " .. timesLeft .. " times")
+            elseif timesLeft > 0 then
+                setupCallback(funct, timesLeft - 1)
+            end
+        else
+            log("Callback " .. id .. " was successful")
+        end
+    end
+    return t
+end
+
+local function updateTimer(t)
+    if callbacks[t] then
+        callbacks[t]()
+    end
+end
 
 local function sndBack(e)
     if verifyMsg(e) then
@@ -38,10 +68,9 @@ local function sndBack(e)
             msgID = e[5].msgID
         }) end)
         if ok then
-            local t = os.startTimer(1)
-            callbacks[t] = function
+            setupCallback(function() sndBack(e) end)
+        end
     end
-    return false
 end
 
 local connections = {}
@@ -51,7 +80,9 @@ function genListen(port, address)
     return coroutine.create(function()
         while true do
             local e = {os.pullEventRaw()}
-            if verifyMsg(e, port, address) then
+            if e[1] == "timer" then
+                updateTimer(e[2])
+            elseif verifyMsg(e, port, address) then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
                 elseif e[5].type == "connect" then
