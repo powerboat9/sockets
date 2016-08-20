@@ -59,6 +59,8 @@ local setupCallback(funct, timesLeft, dontBreak)
     return t
 end
 
+local verifyConnection
+
 local function sndBack(e)
     local t
     t = setupCallback(function()
@@ -79,11 +81,14 @@ local function sndBack(e)
     end, 9)
 end
 
-local connections = {}
 function genListen(port, address)
     assert(isValidPort(port), "Invalid port")
     assert(isValidAdress(address) or (address == nil), "Invalid address")
     return coroutine.create(function()
+        local connections = {
+            list = {},
+            timers = {}
+        }
         while true do
             local e = {os.pullEventRaw()}
             if e[1] == "timer" then
@@ -91,6 +96,6 @@ function genListen(port, address)
             elseif verifyMsg(e, port, address) then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
-                    sndBack(e)
                 elseif e[5].type == "connect" then
-                    
+                    local connection = {
+                        to = 
