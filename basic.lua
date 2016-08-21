@@ -46,10 +46,23 @@ local function findInterface(side)
     return false
 end
 
+local function isValidPort(port)
+    return type(port) == "number" and port >= 0 and port <= 65535
+end
+
+local isValidChannel = isValidPort
+
+local function isValidAddress(address)
+    return (type(address) == number and address ~= math.huge) or (type(address) == "string" and address ~= "")
+end
+
+local function isValidMsgID(id)
+    
+
 local verifyMsg(e, port, address)
     assert(isValidPort(port) or port == nil, "Invalid port")
     assert(isValidAddress(address) or address == nil, "Invalid address")
-    return e[1] == "modem_message" and type(e[5]) == "table" and e[5]._pgram == "PSocket" and (e[5].port == port or not port) and (e[5].to == address or not address) and (isValidPort(e[5].retPort) or e[5].retPort == nil) and isValidAddress(e[5].from) and isValidMsgId(e[5].msgID)
+    return e[1] == "modem_message" and isValidSide(e[2]) and isValidChannel(e[3]) and isValidChannel(e[4]) and type(e[5]) == "table" and e[5]._pgram == "PSocket" and isValidPort(e[5].port) and (e[5].port == port or not port) and isValidAddress(e[5].to) and (e[5].to == address or not address) and (isValidPort(e[5].retPort) or e[5].retPort == nil) and isValidAddress(e[5].from) and isValidMsgId(e[5].msgID)
 end
 
 local function updateTimer(t)
@@ -103,12 +116,14 @@ local function sndBack(e)
     end, 9)
 end
 
-local function genTransmitBackFunction(e)
-    if not verifyMsg(e) then
-        return false
+local function _CONNECTION_send(self, msg)
+    if type(msg) == "table" and self.autofill then
+        msg._pgram = msg._pgram or "PSocket"
+        msg.to, msg.from = msg.to or self.to, msg.from or self.from
+        msg.port, msg.connectionID = msg.port or self.other.recvPort, msg.connectionID or self.other.connectionID
     end
-    return function(msg)
-        e[
+    self.interface.modem.transmit(self.other.recvChannel, self.this.recvChannel, msg)
+end
 
 local function startConnection(e)
     if not verifyMsg(e) or e[5].type ~= "startConnection" then
@@ -118,21 +133,46 @@ local function startConnection(e)
     if not interface then
         return false
     end
+    local myConnectionID = math.random(4294967295)
     local connection = {
-        otherConnectionID = e[5].connectID,
-        transmit = genTransmitBackFunction(e)
+        other = {
+            connectionID = e[5].myConnectionID,
+            recvChannel = e[4],
+            recvPort = e[5].retPort or e[5].port
+        },
+        this = {
+            connectionID = myConnectionID,
+            recvChannel = e[3],
+            recvPort = e[5].port
+        },
+        to = e[5].from,
+        from = e[5].to,
+        interface = interface,
+        send = _CONNECTION_send,
+        autofill = true,
+        stage = 1
     }
-    sendBack(e, {
-        _pgram = "PSocket",
+    connection:send({
         type = "okConnection",
-        connectID = e[5].connectID)
+        myConnectionID = connection.this.connectionID
+     })
+     interface.connections[#connections + 1]
+end
+
+local startingConnections = {}
+local startConnection(sendChannel, recvChannel, to, from, sendPort, recvPort)
+    if not (isValidChannel(channel) and isValidAddress(address) and isValidPort(port)) then
+        return false
+    end
+    local connection = {
+        this = {
+            connectionID = math.random(cd & git pull && cd ../ && cd BeetleOS && git pull && cd ../ && cd Sockets && git p
 
 local function broadcastKeepAlives(interface)
     for prefix in pairs(interfaces) do
         for n in pairs(interfaces[prefix]) do
             for _, connection in ipairs(interfaces[prefix][n].connections) do
-                connection.send({
-                    _pgram = "PSocket",
+                connection:send({
                     type = "keepAlive"
                 })
             end
