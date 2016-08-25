@@ -1,35 +1,37 @@
 math.randomseed(os.time()); math.random(); math.random()
-local function log(msg) end
 
-local function canCall(v) --"Tail recursion is it's own reward" -xkcd
-    if type(v) == "function" then
-        return true
-    elseif type(v) == "table" and getmetatable(v) then
-        return canCall(getmetatable(v).__call)
-    else
-        return false
+local timeout = 5
+local msgIDs = {}
+
+local cron = {}
+do
+    local f = fs.open("cron.lua", "r")
+    local ok, err= pcall(load(f.readAll(), "loadCron", "t", cron))
+    if not ok then
+        local prtErr = tostring(err)
+        prtErr = prtErr and (": " .. prtErr) or ""
+        error("Could not load cron" .. prtEr, 0)
     end
 end
 
+local defaultInterface = {"wlan", 0}
 local interfaces = {}
 function addInterface(side)
     if peripheral.getType(side) == "modem" then
         local prefix = peripheral.call(side, "isWireless") ? "wlan" : "eth"
-        local n = #interfaces[prefix]
         if not interfaces[prefix] = interfaces[prefix] or {}
+        local n = #interfaces[prefix] + 1
         interfaces[prefix][n] = {modem = peripheral.wrap(side), connections = {}, side = side}
-        return prefix .. n
+        return prefix, n
     else
         return false
     end
 end
 
-local function findInterface(side)
-    local isOk = false
-    for _, checkSide in ipairs(rs.getSides()) do
-        if side == checkSide then
-            isOk = true
-            break
+function findInterface(side)
+    for _, v in ipairs(rs.getSides()) do
+        if v == side then
+            isOK = true
         end
     end
     if not isOk then
@@ -37,7 +39,7 @@ local function findInterface(side)
     end
     for prefix in pairs(interfaces) do
         for n in pairs(interfaces[prefix]) do
-            local interface = interfaces[prefix][n].side
+            local interface = interfaces[prefix][n]
             if interface.side == side then
                 return interface
             end
@@ -57,67 +59,17 @@ local function isValidAddress(address)
 end
 
 local function isValidMsgID(id)
-    
 
-local verifyMsg(e, port, address)
+local function verifyMsg(e, address, port)
     assert(isValidPort(port) or port == nil, "Invalid port")
     assert(isValidAddress(address) or address == nil, "Invalid address")
     return e[1] == "modem_message" and isValidSide(e[2]) and isValidChannel(e[3]) and isValidChannel(e[4]) and type(e[5]) == "table" and e[5]._pgram == "PSocket" and isValidPort(e[5].port) and (e[5].port == port or not port) and isValidAddress(e[5].to) and (e[5].to == address or not address) and (isValidPort(e[5].retPort) or e[5].retPort == nil) and isValidAddress(e[5].from) and isValidMsgId(e[5].msgID)
 end
 
-local function updateTimer(t)
-    if callbacks[t] then
-        callbacks[t]()
-    end
-end
-
-local callbacks = {}
-local setupCallback(funct, timesLeft, dontBreak)
-    assert(canCall(funct), "Invalid function")
-    timesLeft = timesLeft or 9
-    assert(type(timesLeft) == "number", "Invalid callback number")
-    local t = os.startTimer(1)
-    callbacks[t] = function()
-        local ok, err = pcall(funct)
-        local _, _, id = tostring(funct):find("^[^ ]* (.*)")
-        if not ok or dontBreak then
-            log("Callback " .. id .. " failed, " .. (timesLeft == 0 and "no" or timesLeft) .. " tries left")
-            if timesLeft < 0 then
-                log("Failed to call a function " .. timesLeft .. " times")
-            elseif timesLeft > 0 then
-                setupCallback(funct, timesLeft - 1, dontBreak)
-            end
-        else
-            log("Callback " .. id .. " was successful")
-        end
-    end
-    return t
-end
-
-local verifyConnection
-
-local function sndBack(e)
-    local t
-    t = setupCallback(function()
-        if verifyMsg(e) then
-            local ok = pcall(function() peripheral.call(e[2], "transmit", e[4], e[3], {
-                type = "verify",
-                port = e[5].retPort or e[5].port,
-                to = e[5].from,
-                from = e[5].to,
-                msgID = e[5].msgID
-            }) end)
-            if not ok
-                updateTimer(t)
-            end
-        else
-            updateTimer(t)
-        end
-    end, 9)
-end
-
 local function _CONNECTION_send(self, msg)
-    if type(msg) == "table" and self.autofill then
+    if self.stage == 0 then
+        error("Socket unprepaired", 2)
+    elseif type(msg) == "table" and self.autofill then
         msg._pgram = msg._pgram or "PSocket"
         msg.to, msg.from = msg.to or self.to, msg.from or self.from
         msg.port, msg.connectionID = msg.port or self.other.recvPort, msg.connectionID or self.other.connectionID
@@ -125,7 +77,7 @@ local function _CONNECTION_send(self, msg)
     self.interface.modem.transmit(self.other.recvChannel, self.this.recvChannel, msg)
 end
 
-local function startConnection(e)
+local function continueConnection(e)
     if not verifyMsg(e) or e[5].type ~= "startConnection" then
         return false
     end
@@ -150,31 +102,71 @@ local function startConnection(e)
         interface = interface,
         send = _CONNECTION_send,
         autofill = true,
-        stage = 1
+        stage = 1,
+        t = os.startTimer(timeout)
     }
     connection:send({
         type = "okConnection",
         myConnectionID = connection.this.connectionID
      })
-     interface.connections[#connections + 1]
+     interface.connections[#connections + 1] = connection
+     return connection
 end
 
 local startingConnections = {}
-local startConnection(sendChannel, recvChannel, to, from, sendPort, recvPort)
-    if not (isValidChannel(channel) and isValidAddress(address) and isValidPort(port)) then
+function startConnection(sendChannel, recvChannel, to, from, sendPort, recvPort)
+    if not (isValidChannel(sendChannel) and isValidChannel(recvChannel) and isValidAddress(to) isValidAddress(from) and and isValidPort(sendPort) and isValidPort(recvPort)) then
+        return false
+    end
+    local interface = interfaces[defaultInterface[1]]
+    if interface then
+        interface = interface[defaultInterface[2]]
+    end
+    if not interface then
         return false
     end
     local connection = {
         this = {
-            connectionID = math.random(cd & git pull && cd ../ && cd BeetleOS && git pull && cd ../ && cd Sockets && git p
+            connectionID = math.random(0, 65535),
+            recvChannel = recvChannel,
+            recvPort = recvPort
+        },
+        other = {
+            connectionID = false,
+            recvChannel = sendChannel,
+            recvPort = sendPort
+        },
+        to = to,
+        from = from,
+        interface = interface,
+        send = _CONNECTION_send,
+        autofill = true,
+        stage = 0,
+        t = os.startTimer(timeout)
+    }
+    interface.connections[#interface.connections + 1] = connection
+    return true
+end
+
+local function completeConnection(e)
+    if not verifyMsg(e) or e[5].type ~= "okConnection" then
+        return false
+    end
+    for prefix in pairs(interfaces) do
+        for 
+
+local function updateConnectionTimers(t)
+    for 
 
 local function broadcastKeepAlives(interface)
     for prefix in pairs(interfaces) do
         for n in pairs(interfaces[prefix]) do
             for _, connection in ipairs(interfaces[prefix][n].connections) do
-                connection:send({
-                    type = "keepAlive"
-                })
+                if connection.stage == 1 then
+                    connection:send({
+                        type = "keepAlive"
+                    })
+                end
             end
         end
     end
@@ -188,9 +180,17 @@ function genListen(port, address)
             local e = {os.pullEventRaw()}
             if e[1] == "timer" then
                 updateTimer(e[2])
+                updateConnectionTimers(e[2])
+                cron.update(e[2])
             elseif verifyMsg(e, port, address) then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
                 elseif e[5].type == "connect" then
-                    local connection = {
-                        to = 
+                    local con = continueConnection(e)
+                    if con then
+                        coroutine.yield(true, "establishedCon", con)
+                    else
+                        coroutine.yield()
+                    end
+                elseif e[5].type == "terminateConnection" then
+                    if connect
