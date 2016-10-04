@@ -1,12 +1,30 @@
 math.randomseed(os.time()); math.random(); math.random()
 
+local hash = PCrypt.hash.sha256
+
+local sign = PCrypt.encrypt.RSA.encrypt
+
 local timeout = 5
 local msgIDs = {}
+
+local function spairs(t, k) --super pears/pairs
+    if type(t) ~= "table" then
+        error("Expected table", 2)
+    end
+    if type(k) == "number" and t[k] ~= nil then
+        return k + 1, k, t[k]
+    else
+        return next(t, k)
+    end
+end
 
 local cron = {}
 do
     local f = fs.open("cron.lua", "r")
-    local ok, err= pcall(load(f.readAll(), "loadCron", "t", cron))
+    if not f then
+        error("Could not load cron file", 0)
+    end
+    local ok, err = pcall(load(f.readAll(), "loadCron", "t", cron))
     if not ok then
         local prtErr = tostring(err)
         prtErr = prtErr and (": " .. prtErr) or ""
@@ -14,12 +32,15 @@ do
     end
 end
 
+local publicKeys = {}
+local privateKeys = {}
+
 local defaultInterface = {"wlan", 0}
 local interfaces = {}
 function addInterface(side)
     if peripheral.getType(side) == "modem" then
         local prefix = peripheral.call(side, "isWireless") ? "wlan" : "eth"
-        if not interfaces[prefix] = interfaces[prefix] or {}
+        interfaces[prefix] = interfaces[prefix] or {}
         local n = #interfaces[prefix] + 1
         interfaces[prefix][n] = {modem = peripheral.wrap(side), connections = {}, side = side}
         return prefix, n
@@ -29,24 +50,26 @@ function addInterface(side)
 end
 
 function findInterface(side)
-    for _, v in ipairs(rs.getSides()) do
-        if v == side then
-            isOK = true
-        end
-    end
-    if not isOk then
+    if type(side) ~= "string" or peripheral.getType(side) ~= "modem" then
         return false
     end
     for prefix in pairs(interfaces) do
         for n in pairs(interfaces[prefix]) do
             local interface = interfaces[prefix][n]
             if interface.side == side then
-                return interface
+                return interface, prefix, n
             end
         end
     end
     return false
 end
+
+local function deleteInterface(prefix, n)
+    if not interfaces[prefix][n] then
+        return false
+    end
+    for connectionID, connection in spairs(interfaces[prefix][n].connections) do
+        connection:terminate(
 
 local function isValidPort(port)
     return type(port) == "number" and port >= 0 and port <= 65535
@@ -58,12 +81,44 @@ local function isValidAddress(address)
     return (type(address) == number and address ~= math.huge) or (type(address) == "string" and address ~= "")
 end
 
-local function isValidMsgID(id)
+local getSign
+do
+    local function escapeVals(...)
+        local ret = {}
+        for i = 1, #args do
+            ret[i] = args[i]:gsub("$", "$$"):gsub(":", " $-")
+        end
+        return ret
+    end
+    getSign = function(msg)
+        if isValidAddress(msg.to) and isValidAddress(msg.from) and type(msg.stamp) == "number" and type(msg.port) == "number" then
+            return table.concat(es, ":"
+        
 
-local function verifyMsg(e, address, port)
+local function verifyMsg(msg, address, port)
     assert(isValidPort(port) or port == nil, "Invalid port")
     assert(isValidAddress(address) or address == nil, "Invalid address")
-    return e[1] == "modem_message" and isValidSide(e[2]) and isValidChannel(e[3]) and isValidChannel(e[4]) and type(e[5]) == "table" and e[5]._pgram == "PSocket" and isValidPort(e[5].port) and (e[5].port == port or not port) and isValidAddress(e[5].to) and (e[5].to == address or not address) and (isValidPort(e[5].retPort) or e[5].retPort == nil) and isValidAddress(e[5].from) and isValidMsgId(e[5].msgID)
+    if type(msg) ~= "table" or msg._pgram ~= "PSocket" or not isValidPort(msg.port) or (port and msg.port ~= port) or not isValidAddress(msg.to) or (address and msg.to ~= address) or (msg.retPort ~= nil and not isValidPort(msg.retPort)) or not isValidAddress(msg.from) or type(msg.stamp) ~= "number" then
+        return false
+    end
+    if not msg.isSecure or 
+end
+
+local function verifyMsgEvent(e, address, port)
+    if e[1] ~= "modem_message" or not isValidSide(e[2]) or not isValidChannel(e[3]) or not isValidChannel(e[4]) then
+        return false
+    end
+    return verifyMsg(e[5], address, port)
+end
+
+local function makeMsgSecure(self, msg)
+    if isValidAddress(msg.to) and isValidAddress(msg.from) and type(msg.stamp) == "number" and type(msg.port) == "number" then
+        msg.check = sign(tostring(msg.to):gsub("$", "$$"):gsub(":", "$1") .. ":" .. tostring(msg.from):gsub("$", "$$"):gsub(":", "$1") .. ":" .. msg.port)
+        msg.isSecure = true
+        return true
+    else
+        return false
+    end
 end
 
 local function _CONNECTION_send(self, msg)
@@ -73,19 +128,26 @@ local function _CONNECTION_send(self, msg)
         msg._pgram = msg._pgram or "PSocket"
         msg.to, msg.from = msg.to or self.to, msg.from or self.from
         msg.port, msg.connectionID = msg.port or self.other.recvPort, msg.connectionID or self.other.connectionID
+        msg.stamp = os.time() + os.day() * 24000
+        if self.isSecure and not self:makeMsgSecure(msg) then
+            error("Could not continue with secure msg", 2)
+        end
     end
     self.interface.modem.transmit(self.other.recvChannel, self.this.recvChannel, msg)
 end
 
+local function _CONNECTION_terminate(self)
+    self.
+
 local function continueConnection(e)
-    if not verifyMsg(e) or e[5].type ~= "startConnection" then
+    if not verifyMsgEvent(e) or e[5].type ~= "startConnection" then
         return false
     end
     local interface = findInterface(e[2])
     if not interface then
         return false
     end
-    local myConnectionID = math.random(4294967295)
+    local myConnectionID = #connections + 1
     local connection = {
         other = {
             connectionID = e[5].myConnectionID,
@@ -105,11 +167,12 @@ local function continueConnection(e)
         stage = 1,
         t = os.startTimer(timeout)
     }
+    if e[5].isSecure then --TODO
     connection:send({
         type = "okConnection",
         myConnectionID = connection.this.connectionID
      })
-     interface.connections[#connections + 1] = connection
+     interface.connections[myConnectionID] = connection
      return connection
 end
 
@@ -149,11 +212,11 @@ function startConnection(sendChannel, recvChannel, to, from, sendPort, recvPort)
 end
 
 local function completeConnection(e)
-    if not verifyMsg(e) or e[5].type ~= "okConnection" then
+    if not verifyMsgEvent(e) or e[5].type ~= "okConnection" then
         return false
     end
     for prefix in pairs(interfaces) do
-        for 
+        for i = 1, #interfaces[
 
 local function updateConnectionTimers(t)
     for 
@@ -172,17 +235,20 @@ local function broadcastKeepAlives(interface)
     end
 end
 
+local routines = {secure = {}, list = {}}
 function genListen(port, address)
     assert(isValidPort(port), "Invalid port")
     assert(isValidAdress(address) or (address == nil), "Invalid address")
-    return coroutine.create(function()
+    local n = #routines + 1
+    routines.list[n] = coroutine.create(function()
         while true do
-            local e = {os.pullEventRaw()}
+            local e = {coroutine.yield(false, "getData")}
+            local interface = findInterface(e[2])
             if e[1] == "timer" then
                 updateTimer(e[2])
                 updateConnectionTimers(e[2])
                 cron.update(e[2])
-            elseif verifyMsg(e, port, address) then
+            elseif verifyMsgEvent(e, port, address) and interface then
                 if e[5].type == "msg" then
                     coroutine.yield(true, "msg", e[5].msg, e[5].address)
                 elseif e[5].type == "connect" then
@@ -193,4 +259,4 @@ function genListen(port, address)
                         coroutine.yield()
                     end
                 elseif e[5].type == "terminateConnection" then
-                    if connect
+                    if fi
